@@ -21,6 +21,9 @@ jobs:
   android:
     name: Android app (APK)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: timetable-app   # the app lives in this subfolder
     steps:
       - uses: actions/checkout@v4
 
@@ -71,7 +74,7 @@ jobs:
           grep -E "versionCode|versionName" android/app/build.gradle
 
       - name: Build the APK
-        working-directory: android
+        working-directory: timetable-app/android
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Name the APK
@@ -83,7 +86,7 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: Timetable (build ${{ github.run_number }})
           body: Open this page on your Android phone, tap **Timetable.apk** to download it, then open the file to install.
-          files: Timetable.apk
+          files: timetable-app/Timetable.apk
           make_latest: true
 
   website:
@@ -100,6 +103,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: www
+          path: timetable-app/www
       - id: deploy
         uses: actions/deploy-pages@v4
