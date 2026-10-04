@@ -1,4 +1,5 @@
 import { parseICS, expandEvents } from './ics.js';
+import { lookupPlace } from './places.js';
 
 const K = {
   url: 'tt.url',
@@ -49,7 +50,7 @@ let noteTimer;
 /* ---------- personal settings: hidden modules, names, colours, notes ---------- */
 
 function emptyPrefs() {
-  return { hidden: {}, names: {}, colours: {}, notes: {}, mapsArea: '' };
+  return { hidden: {}, names: {}, colours: {}, notes: {}, places: {}, mapsArea: '' };
 }
 
 function loadPrefs() {
@@ -178,14 +179,48 @@ function badgeFor(e) {
 }
 
 const ONLINE_RE = /\b(online|teams|zoom|virtual|remote|collaborate)\b/i;
+const isPhysical = (location) => !!location && !/https?:\/\//.test(location) && !ONLINE_RE.test(location);
+
+// The building part of a location: room codes like "CLC013" removed, as they confuse map
+// searches. Locations that are only a code stay as they are.
+function buildingOf(location) {
+  const building = location.replace(/\b[A-Z]{1,5}\d{2,4}[A-Z]?\b/g, '').replace(/\s{2,}/g, ' ').replace(/[\s,;–-]+$/, '').trim();
+  return building || location.trim();
+}
+
+// The full building name the user typed for this location, if any.
+const placeName = (location) => (isPhysical(location) ? prefs.places[buildingOf(location)] || '' : '');
+
+// The building from the built-in list of room codes (places.js), if the location has a known code.
+const knownPlace = (location) => (isPhysical(location) ? lookupPlace(location) : null);
+
+// Short building name to show next to the location: what the user typed, else the built-in name.
+function buildingName(location) {
+  return placeName(location).split(',')[0].trim() || knownPlace(location)?.building || '';
+}
+
+// Location as shown on cards: the timetable's text, plus the building name when it adds something.
+function placeLabel(location) {
+  const full = buildingName(location);
+  return full && !location.toLowerCase().includes(full.toLowerCase()) ? `${location} · ${full}` : location;
+}
+
 function placeLink(location) {
   if (!location) return null;
   const url = location.match(/https?:\/\/\S+/);
   if (url) return url[0];
-  if (ONLINE_RE.test(location)) return null;
-  // Room codes like "CLC013" confuse map searches, so search for the building name.
-  const building = location.replace(/\b[A-Z]{1,5}\d{2,4}[A-Z]?\b/g, '').replace(/\s{2,}/g, ' ').replace(/[\s,;–-]+$/, '').trim();
-  const query = [building || location, prefs.mapsArea].filter(Boolean).join(', ');
+  if (!isPhysical(location)) return null;
+  const typed = placeName(location);
+  const known = knownPlace(location);
+  let query;
+  if (typed) {
+    const area = prefs.mapsArea && !typed.toLowerCase().includes(prefs.mapsArea.toLowerCase()) ? prefs.mapsArea : '';
+    query = [typed, area].filter(Boolean).join(', ');
+  } else if (known) {
+    query = `${known.building}, ${known.address}`;
+  } else {
+    query = [buildingOf(location), prefs.mapsArea].filter(Boolean).join(', ');
+  }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
@@ -221,8 +256,8 @@ function card(e, now, extra) {
       el('div', { class: 'title' }, el('span', { class: 'title-text' }, nameOf(e)), badge && el('span', { class: 'badge' }, badge)),
       e.location && (link
         ? el('a', { class: 'meta', href: link, target: '_blank', rel: 'noopener', onclick: (ev) => ev.stopPropagation() },
-            icon('pin'), el('span', {}, e.location))
-        : el('div', { class: 'meta' }, icon('pin'), el('span', {}, e.location))),
+            icon('pin'), el('span', {}, placeLabel(e.location)))
+        : el('div', { class: 'meta' }, icon('pin'), el('span', {}, placeLabel(e.location)))),
       note && el('div', { class: 'meta note' }, icon('note'), el('span', {}, note.split('\n')[0])),
       live && el('div', { class: 'pill' }, `Now · until ${fmtTime(e.end)}`),
       extra
@@ -457,6 +492,9 @@ function openSession(e) {
   currentSession = e;
   fillSession();
   $('#ses-note').value = prefs.notes[e.key] || '';
+  $('#ses-place-name').value = placeName(e.location);
+  $('#ses-place-name').placeholder = isPhysical(e.location) ? buildingOf(e.location) : '';
+  $('#ses-place-edit').open = false;
   $('#session-dialog').showModal();
 }
 
@@ -470,7 +508,18 @@ function fillSession() {
   original.hidden = !prefs.names[e.module];
   $('#ses-when').textContent = `${e.start.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })} · ${timeRange(e)}${e.cancelled ? ' · Cancelled' : ''}`;
   $('#ses-place').hidden = !e.location;
-  $('#ses-place-text').textContent = e.location;
+  $('#ses-place-text').textContent = placeLabel(e.location);
+  $('#ses-place-edit').hidden = !isPhysical(e.location);
+  const typed = placeName(e.location);
+  const known = knownPlace(e.location);
+  const detail = $('#ses-place-detail');
+  detail.textContent = known && !typed
+    ? [known.room, `${known.building}, ${known.address}`].filter(Boolean).join(' · ')
+    : '';
+  detail.hidden = !detail.textContent;
+  $('#ses-place-summary').textContent = typed
+    ? `Building: ${typed} (change)`
+    : known ? 'Wrong building? Type the right one' : 'Unknown building? Type its full name';
   const link = placeLink(e.location);
   const directions = $('#ses-directions');
   directions.hidden = !link;
@@ -903,6 +952,16 @@ function wire() {
   $('#ses-note').addEventListener('input', () => { clearTimeout(noteTimer); noteTimer = setTimeout(saveNote, 400); });
   $('#session-dialog').addEventListener('close', () => { saveNote(); currentSession = null; render(); });
   $('#ses-module').addEventListener('click', () => { if (currentSession) openModule(currentSession.module); });
+  $('#ses-place-name').addEventListener('input', (ev) => {
+    if (!currentSession || !isPhysical(currentSession.location)) return;
+    const building = buildingOf(currentSession.location);
+    const name = ev.target.value.trim();
+    if (name) prefs.places[building] = name;
+    else delete prefs.places[building];
+    savePrefs();
+    fillSession();
+    render();
+  });
 
   // Module editor
   $('#mod-name').addEventListener('input', (e) => {

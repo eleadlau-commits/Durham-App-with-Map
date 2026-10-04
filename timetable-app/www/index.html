@@ -187,6 +187,13 @@
       <span id="ses-place-text"></span>
       <a class="btn small" id="ses-directions" target="_blank" rel="noopener">Directions</a>
     </div>
+    <p class="ses-place-detail" id="ses-place-detail" hidden></p>
+    <details class="place-edit" id="ses-place-edit">
+      <summary id="ses-place-summary">Unknown building? Type its full name</summary>
+      <label class="label" for="ses-place-name">Full building name</label>
+      <input id="ses-place-name" type="text" autocomplete="off">
+      <p class="hint small">Used for directions and shown on every session in this building. Add the town if Maps still finds the wrong place.</p>
+    </details>
     <p class="ses-desc" id="ses-desc"></p>
     <label class="label" for="ses-note">Your notes</label>
     <textarea id="ses-note" rows="3" placeholder="e.g. bring laptop, problem set 2 due"></textarea>

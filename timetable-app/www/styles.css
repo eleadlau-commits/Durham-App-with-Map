@@ -473,6 +473,10 @@ dialog::backdrop { background: rgb(0 0 0 / .45); }
 .ses-row svg { color: var(--muted); }
 .ses-row span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .btn.small { padding: 7px 12px; font-size: 14px; text-decoration: none; white-space: nowrap; }
+.ses-place-detail { margin: -6px 0 0 30px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.place-edit summary { color: var(--accent); font-size: 14px; font-weight: 600; cursor: pointer; overflow-wrap: anywhere; }
+.dialog-body .place-edit .label { margin: 12px 0 6px; }
+.dialog-body .place-edit .hint.small { margin-top: 6px; }
 .ses-desc {
   margin: 0;
   max-height: 30vh;
