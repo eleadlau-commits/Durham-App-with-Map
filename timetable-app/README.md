@@ -53,10 +53,11 @@ This only affects the web version, not the Android app. Browsers only let a web 
 - **Day, Week and Upcoming views.** Swipe left or right to move between days or weeks. Tap a day in the week grid to open it.
 - **Session details.** Tap any session to see its time, room and description.
 - **Notes.** Add your own notes to any session, for example "bring laptop". The first line shows on the card.
-- **Directions.** Tap a room to search for it in Google Maps. In **Settings → Area for map searches**, add your university's name and town so Maps finds the right building.
+- **Durham room codes.** The app has a built-in list of Durham University room codes (in `www/places.js`), so `CLC013` shows as *Calman Learning Centre*, and its details show *Arnold Wolfendale Lecture Theatre*. It covers 45 buildings and was built from [AccessAble's Durham guides](https://www.accessable.co.uk/durham-university/learning-spaces) in October 2026.
+- **Directions.** Tap a room to open its building in Google Maps. For a location the app doesn't recognise, open the session and type the building's full name under *Unknown building?*. It's remembered for every session there. You can also use this to correct a building the list gets wrong.
 - **Modules.** In **Settings → Modules**, or via *Colour, name or hide this module* on a session, you can rename a module (for example "ECON1011" to "Microeconomics"), pick its colour, or hide it.
 
-Notes and module settings are stored only on your phone.
+Notes, module settings and building names you type are stored only on your phone.
 
 ## Updating the app
 
